@@ -16,32 +16,41 @@ from folium import plugins
 
 
 # Function to plot gage cross-section and threshold values
-def plot_gage_xs(index, gage_path, gage_thresholds, cross_sections, gage_datum, dem_res):
+def plotGageXS(index, gage_path, gage_thresholds, cross_sections, gage_datum, dem, dem_res):
     colors=['r', 'g', 'b']
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1,2, figsize=(10,5))
     for ind, (k, v) in enumerate(gage_path.items()):
         if ind == index:
-            print('Available DEM Resolution')
+            res_list = []
             for dk, dv in dem_res[index].items():
                 if dv == True:
-                    print(f'{dk}:{dv}')
+                    res_list.append(f'{dk}:{dv}')
+            print(f"Available Resolution: {', '.join(res_list)}")
             name=v['name']
-            plt.title(f'USGS Gage {k}:{name}')
-            cross_sections[index].plot.line(x='distance', y='elevation', ax=ax)
-
+            
+            cross_sections[index].plot.line(x='distance', y='elevation', ax=ax[0])
+            
+            dem[0].plot(ax=ax[1])
+            
+            
     for ind, (k, v) in enumerate(gage_thresholds.items()):
         if ind == index:
             for ind2, (thresh_k, thresh_v) in enumerate(v['Thresholds'].items()):
 
-                ax.axhline(y=(thresh_v['Value']*.3048)+gage_datum[index], 
+                ax[0].axhline(y=(thresh_v['Value']*.3048)+gage_datum[index], 
                            color=colors[ind2], 
                            linestyle='-', 
                            label=thresh_v['Name'])
-                ax.legend(bbox_to_anchor=(0.6, -0.15))
-                ax.set_ylabel('Elevation (m)')
-                ax.set_xlabel('Distance from left bank (m)')
+                
+    ax[0].legend(bbox_to_anchor=(0.6, -0.15))
+    ax[0].set_ylabel('Elevation (m)')
+    ax[0].set_xlabel('Distance from left bank (m)')                
+#     ax[1].set_aspect('image')
+#     ax[0].set_aspect('image')
+    plt.title(f'USGS Gage {k}:{name}', y= 1.1)
+#     plt.tight_layout()
 
-def plot_gage_location(index, gage_location, gage_path, gage_thresholds, cross_sections):
+def plotGageLocation(index, gage_location, gage_path, gage_thresholds, cross_sections):
     gage_loc = [gage_location[index].geometry.y[0], gage_location[index].geometry.x[0]]
 #     print(gage_loc)
 #     xs_geojson = cross_sections[index].to_json()
@@ -84,3 +93,23 @@ def plot_gage_location(index, gage_location, gage_path, gage_thresholds, cross_s
     folium.LayerControl().add_to(m)
     plugins.MousePosition().add_to(m)
     return m
+
+def interpTValues(gage_path, gage_thresholds, gage_datum_m, dem):
+    interp_v = []
+    absTValue = []
+    headers = ['Gage', 'Gage Name', 'Threshold Name', 'Threshold Value', 'DEM Interpolated Value', 'Difference']
+    for index, (k,v) in enumerate(gage_thresholds.items()):
+        for ind2, (thresh_k, thresh_v) in enumerate(v['Thresholds'].items()):
+            absTValue = gage_datum_m[index] + thresh_v['Value']*.3048
+            intv = dem[index].interp(x= thresh_v['lon'], y=thresh_v['lat'])
+            if index == 0 and ind2 == 0:
+                print(', '.join(headers))
+            gage_name = list(gage_path.values())[index]['name'].replace(',', ' ')
+            t_name = thresh_v['Name']
+            print(f'{k}, ', \
+                  f'{gage_name}, ', \
+                  f'{t_name}, ', \
+                  f'{absTValue}, ', \
+                  f'{intv.values}, ', \
+                  f'{absTValue-intv.values}')
+            
