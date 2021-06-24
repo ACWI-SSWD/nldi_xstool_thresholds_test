@@ -30,7 +30,7 @@ def plotGageXS(index, gage_path, gage_thresholds, cross_sections, gage_datum, de
             
             cross_sections[index].plot.line(x='distance', y='elevation', ax=ax[0])
             
-            dem[0].plot(ax=ax[1])
+            dem[index].plot(ax=ax[1])
             
             
     for ind, (k, v) in enumerate(gage_thresholds.items()):
