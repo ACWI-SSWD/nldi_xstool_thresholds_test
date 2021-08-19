@@ -13,11 +13,57 @@ import requests
 # import plotly.express as px
 import folium
 from folium import plugins
+from cycler import cycler
+from itertools import cycle
+
+# Function to plot gage cross-section, measured cross-section, and threshold values
+def plotGageXS_meas(index, gage_path, gage_thresholds, cross_sections, meas_xs, gage_datum, dem, dem_res, tindex):
+    col_cycler = cycler(c=['r', 'g'])
+    lw_cycler = cycler(lw=[1, 3])
+    ls_cycler = cycler(ls=['-','-.'])
+    
+    style_cycler = col_cycler*lw_cycler*ls_cycler
+    
+    fig, ax = plt.subplots(1,2, figsize=(10,5))
+    for ind, (k, v) in enumerate(gage_path.items()):
+        if ind == index:
+            res_list = []
+            for dk, dv in dem_res[index].items():
+                if dv == True:
+                    res_list.append(f'{dk}:{dv}')
+            print(f"Available Resolution: {', '.join(res_list)}")
+            name=v['name']
+            
+            cross_sections[index].plot.line(x='distance', y='elevation', ax=ax[0])
+            
+            
+            dem[index].plot(ax=ax[1])
+            cross_sections[index].plot(ax=ax[1], c='r')
+            
+    for ind, (k, v) in enumerate(gage_thresholds.items()):
+        if ind == index:
+            num_t = len(v['Thresholds'])
+#             print(num_t)
+            colors = plt.cm.YlOrRd(np.linspace(0,1,num_t))
+            for ind2, ((thresh_k, thresh_v), style) in enumerate(zip(v['Thresholds'].items(), cycle(style_cycler))):
+#                 print(ind2)
+                if ind2 in tindex:
+                    ax[0].axhline(y=(thresh_v['Value']*.3048)+gage_datum[index], 
+                               label=thresh_v['Name'], 
+                               **style)
+    meas_xs.plot.line(x='station', y='measured_elevation_m', ax=ax[0], c='black')            
+    ax[0].legend(bbox_to_anchor=(0.6, -0.15))
+    ax[0].set_ylabel('Elevation (m)')
+    ax[0].set_xlabel('Distance from left bank (m)')                
+#     ax[1].set_aspect('image')
+#     ax[0].set_aspect('image')
+    plt.title(f'USGS Gage {k}:{name}', y= 1.1)
+#     plt.tight_layout()
 
 
 # Function to plot gage cross-section and threshold values
 def plotGageXS(index, gage_path, gage_thresholds, cross_sections, gage_datum, dem, dem_res):
-    colors=['r', 'g', 'b']
+    colors=['r', 'g', 'b', 'm', 'y', 'c']
     fig, ax = plt.subplots(1,2, figsize=(10,5))
     for ind, (k, v) in enumerate(gage_path.items()):
         if ind == index:
@@ -35,8 +81,11 @@ def plotGageXS(index, gage_path, gage_thresholds, cross_sections, gage_datum, de
             
     for ind, (k, v) in enumerate(gage_thresholds.items()):
         if ind == index:
+            num_t = len(v['Thresholds'])
+            print(num_t)
+            colors = plt.cm.YlOrRd(np.linspace(0,1,num_t))
             for ind2, (thresh_k, thresh_v) in enumerate(v['Thresholds'].items()):
-
+                print(ind2)
                 ax[0].axhline(y=(thresh_v['Value']*.3048)+gage_datum[index], 
                            color=colors[ind2], 
                            linestyle='-', 
